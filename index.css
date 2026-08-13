@@ -1,0 +1,56 @@
+:root {
+  --paper: #f7f5ef;
+  --ink: #1a1a1a;
+  --navy: #0b2545;
+  --navy-light: #16375f;
+  --brass: #b8901f;
+  --brass-soft: #e4d9a8;
+  --card-bg: #fffdf7;
+  --card-border: rgba(11, 37, 69, 0.14);
+  --slate: #5c6b73;
+  --error: #9c2b1f;
+  --error-bg: #fbeeec;
+
+  --font-display: "Fraunces", "Iowan Old Style", serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image: linear-gradient(rgba(11, 37, 69, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 37, 69, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+button:focus-visible,
+textarea:focus-visible,
+.chip:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
