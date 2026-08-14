@@ -7,7 +7,7 @@ A React + Vite frontend with a FastAPI backend for a RAG-powered university pros
 1. Install dependencies:
 
 ```bash
-cd "c:\Users\Tooba Munir\Downloads\filessssss"
+cd "c:\Users\Tooba Munir\Docs\files"
 npm install
 pip install -r requirements.txt
 ```
@@ -15,7 +15,7 @@ pip install -r requirements.txt
 2. Put your prospectus PDF in the project root, for example:
 
 ```bash
-c:\Users\Tooba Munir\Downloads\filessssss\UG-Porspectus-2024-25.pdf
+c:\Users\Tooba Munir\Doc\files\UG-Porspectus-2024-25.pdf
 ```
 
 3. Index the PDF:
