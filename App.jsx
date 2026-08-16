@@ -25,7 +25,43 @@ function ThinkingCard() {
   );
 }
 
-function Message({ role, content, isError }) {
+function FeedbackRow({ feedback, pending, failed, onRate }) {
+  if (feedback != null) {
+    return (
+      <div className="feedback-row">
+        <span className="feedback-thanks">
+          {feedback === 1 ? "Glad that helped — thanks!" : "Thanks — noted for review."}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="feedback-row">
+      <span className="feedback-prompt">Was this helpful?</span>
+      <button
+        type="button"
+        className="feedback-btn"
+        onClick={() => onRate(1)}
+        disabled={pending}
+        aria-label="Good answer"
+      >
+        👍
+      </button>
+      <button
+        type="button"
+        className="feedback-btn"
+        onClick={() => onRate(-1)}
+        disabled={pending}
+        aria-label="Poor answer"
+      >
+        👎
+      </button>
+      {failed && <span className="feedback-error">Couldn't send that — try again.</span>}
+    </div>
+  );
+}
+
+function Message({ role, content, isError, traceId, feedback, feedbackPending, feedbackFailed, onRate }) {
   if (role === "user") {
     return (
       <div className="msg-row user">
@@ -38,6 +74,9 @@ function Message({ role, content, isError }) {
       <div className={`card ${isError ? "error-card" : ""}`}>
         <span className="tab">{isError ? "NOTE" : "PROSPECTUS"}</span>
         <p className="card-text">{content}</p>
+        {!isError && traceId && (
+          <FeedbackRow feedback={feedback} pending={feedbackPending} failed={feedbackFailed} onRate={onRate} />
+        )}
       </div>
     </div>
   );
@@ -74,7 +113,10 @@ export default function App() {
         throw new Error(data.detail || "Something went wrong.");
       }
 
-      setMessages((prev) => [...prev, { role: "assistant", content: data.answer }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.answer, traceId: data.trace_id },
+      ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -82,6 +124,29 @@ export default function App() {
       ]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function rateAnswer(index, traceId, rating) {
+    setMessages((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, feedbackPending: true, feedbackFailed: false } : m))
+    );
+
+    try {
+      const res = await fetch(`${API_BASE}/api/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trace_id: traceId, rating }),
+      });
+      if (!res.ok) throw new Error();
+
+      setMessages((prev) =>
+        prev.map((m, i) => (i === index ? { ...m, feedback: rating, feedbackPending: false } : m))
+      );
+    } catch {
+      setMessages((prev) =>
+        prev.map((m, i) => (i === index ? { ...m, feedbackPending: false, feedbackFailed: true } : m))
+      );
     }
   }
 
@@ -119,7 +184,17 @@ export default function App() {
           )}
 
           {messages.map((m, i) => (
-            <Message key={i} role={m.role} content={m.content} isError={m.isError} />
+            <Message
+              key={i}
+              role={m.role}
+              content={m.content}
+              isError={m.isError}
+              traceId={m.traceId}
+              feedback={m.feedback}
+              feedbackPending={m.feedbackPending}
+              feedbackFailed={m.feedbackFailed}
+              onRate={(rating) => rateAnswer(i, m.traceId, rating)}
+            />
           ))}
 
           {loading && <ThinkingCard />}
