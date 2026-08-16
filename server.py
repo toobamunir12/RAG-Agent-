@@ -9,6 +9,7 @@ Run with:
 import logging
 import os
 from pathlib import Path
+from typing import Optional
 
 import chromadb
 from dotenv import load_dotenv
@@ -16,12 +17,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 load_dotenv()
 
 from ingestion_pipeline import CHROMA_PATH, COLLECTION_NAME  # noqa: E402
-from rag_agent import ask  # noqa: E402
+from rag_agent import ask, submit_answer_feedback  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uet-rag-api")
@@ -47,6 +48,22 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
+    trace_id: Optional[str] = None
+
+
+class FeedbackRequest(BaseModel):
+    trace_id: str
+    # 1 = 👍, -1 = 👎
+    rating: int = Field(..., ge=-1, le=1)
+    comment: Optional[str] = None
+
+    @property
+    def is_valid_rating(self) -> bool:
+        return self.rating in (-1, 1)
+
+
+class FeedbackResponse(BaseModel):
+    status: str = "ok"
 
 
 @app.on_event("startup")
@@ -89,7 +106,7 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
     try:
-        answer = await ask(question)
+        result = await ask(question)
     except Exception as exc:  # noqa: BLE001 - surface a clean message to the UI
         logger.exception("Agent failed to answer question")
         raise HTTPException(
@@ -101,7 +118,24 @@ async def chat(req: ChatRequest):
             ),
         ) from exc
 
-    return ChatResponse(answer=answer)
+    return ChatResponse(answer=result.answer, trace_id=result.trace_id)
+
+
+@app.post("/api/feedback", response_model=FeedbackResponse)
+async def feedback(req: FeedbackRequest):
+    if not req.is_valid_rating:
+        raise HTTPException(status_code=400, detail="rating must be 1 (👍) or -1 (👎).")
+
+    try:
+        await submit_answer_feedback(req.trace_id, req.rating, comment=req.comment)
+    except Exception as exc:  # noqa: BLE001 - surface a clean message to the UI
+        logger.exception("Failed to submit feedback to Acrux Core")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Couldn't send feedback to Acrux Core. (details: {exc})",
+        ) from exc
+
+    return FeedbackResponse()
 
 
 @app.get("/{full_path:path}")
