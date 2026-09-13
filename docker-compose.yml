@@ -1,0 +1,46 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-backend
+    ports:
+      - "8000:8000"
+    environment:
+      ALLOWED_ORIGINS: "http://frontend"
+    env_file:
+      - .env
+    volumes:
+      - chroma_data:/app/chroma_store
+      - model_cache:/root/.cache
+    command: >
+      sh -c "if [ ! -f /app/chroma_store/.indexed ]; then
+      python ingestion_pipeline.py --source 'UG-Porspectus-2024-25.pdf' &&
+      touch /app/chroma_store/.indexed;
+      else
+      echo 'Existing ChromaDB index found at /app/chroma_store. Skipping ingestion.';
+      fi &&
+      uvicorn server:app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    container_name: rag-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  chroma_data:
+    driver: local
+  model_cache:
+    driver: local

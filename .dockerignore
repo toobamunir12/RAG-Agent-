@@ -1,0 +1,42 @@
+.git
+.gitignore
+.gitattributes
+.env
+README.md
+BUILD_STATUS.md
+DOCKER_CHANGES.md
+DOCKER_QUICK_START.md
+DOCKER_SETUP_NOTES.md
+UG-Porspectus-2024-25.pdf
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info
+dist
+build
+.pytest_cache
+.coverage
+
+# Virtual environments
+.venv
+.venv311
+venv
+env
+
+# Node/Frontend
+node_modules
+dist
+
+# Chroma and model caches (keep out of build context)
+chroma_data
+model_cache
+
+# OS
+.DS_Store
+*.log
+*.swp
+*.swo
